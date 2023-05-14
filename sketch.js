@@ -1,17 +1,18 @@
 class Fluid {
-  constructor(n, dt, diff, visc, iter) {
+  constructor(n, scaled, dt, diff, visc, iter) {
     this.n = n;
     this.dt = dt;
     this.diff = diff;
     this.visc = visc;
     this.iter = iter;
+    this.scaled = scaled;
     
-    this.s = new Array(n * n);
-    this.density = new Array(n * n);
-    this.Vx = new Array(n * n);
-    this.Vy = new Array(n * n);
-    this.Vx0 = new Array(n * n);
-    this.Vy0 = new Array(n * n);
+    this.s = new Array(n * n).fill(0);
+    this.density = new Array(n * n).fill(0);
+    this.Vx = new Array(n * n).fill(0);
+    this.Vy = new Array(n * n).fill(0);
+    this.Vx0 = new Array(n * n).fill(0);
+    this.Vy0 = new Array(n * n).fill(0);
   }
   
   step() {
@@ -29,17 +30,34 @@ class Fluid {
     this.advect(0, this.density, this.s, this.Vx, this.Vy);
   }
   
-  render() {
-    for (let j = 0; j < this.n; j++) {
-      for (let i = 0; i < this.n; i++) {
-        fill(255, this.density[this.getIndex(i, j)]);
+  renderD() {
+    colorMode(HSB);
+    for (let i = 0; i < this.n; i++) {
+      for (let j = 0; j < this.n; j++) {
+        let d = this.density[this.getIndex(i, j)];
+        d = constrain(d - 0.1, 0, 255);
+        this.density[this.getIndex(i, j)] = d;
+        fill(255 - d, 255, 255);
         noStroke();
-        square(i, j, 1);
+        square(i * scaled, j * scaled, scaled);
+      }
+    }
+  }
+  
+  renderV() {
+    colorMode(HSB);
+    for (let i = 0; i < this.n; i++) {
+      for (let j = 0; j < this.n; j++) {
+        fill(255 - (60 * pow(pow(this.Vx[this.getIndex(i, j)], 2) + pow(this.Vy[this.getIndex(i, j)], 2), 0.5)), 255, 255);
+        noStroke();
+        square(i * scaled, j * scaled, scaled);
       }
     }
   }
   
   getIndex(x, y) {
+    x = max(min(x, this.n - 1), 0);
+    y = max(min(y, this.n - 1), 0);
     return x + y * this.n;
   }
   
@@ -64,30 +82,30 @@ class Fluid {
     }
     
     x[this.getIndex(0, 0)] = 0.5 * (x[this.getIndex(1, 0)] + x[this.getIndex(0, 1)]);
-    x[this.getIndex(0, this.n - 1)]     = 0.5 * (x[this.getIndex(1, this.n - 1)] + x[this.getIndex(0, this.n - 2)]);
-    x[this.getIndex(this.n - 1, 0)]     = 0.5 * (x[this.getIndex(this.n - 2, 0)] + x[this.getIndex(this.n - 1, 1)]);
+    x[this.getIndex(0, this.n - 1)] = 0.5 * (x[this.getIndex(1, this.n - 1)] + x[this.getIndex(0, this.n - 2)]);
+    x[this.getIndex(this.n - 1, 0)] = 0.5 * (x[this.getIndex(this.n - 2, 0)] + x[this.getIndex(this.n - 1, 1)]);
     x[this.getIndex(this.n - 1, this.n - 1)]   = 0.5 * (x[this.getIndex(this.n - 2, this.n - 1)] + x[this.getIndex(this.n - 1, this.n - 2)]);
   }
 
-  solveLinear(b, x, x0, a, c, iter) {
-    for (let k = 0; k < iter; k++) {
+  solveLinear(b, x, x0, a, c) {
+    for (let k = 0; k < this.iter; k++) {
       for (let j = 1; j < this.n - 1; j++) {
         for (let i = 1; i < this.n - 1; i++) {
           x[this.getIndex(i, j)] = (x0[this.getIndex(i, j)] +
-                                    a * x[this.getIndex(i + 1, j)] +
+                                    a * (x[this.getIndex(i + 1, j)] +
                                     x[this.getIndex(i - 1, j)] +
                                     x[this.getIndex(i, j + 1)] +
-                                    x[this.getIndex(i, j - 1)]) / c;
+                                    x[this.getIndex(i, j - 1)])) / c;
                                     
         }
       }
-      setBound(b, x);
+      this.setBound(b, x);
     }
   }
   
   diffuse(b, x, x0, diff) {
     let a = this.dt * diff * (this.n - 2) * (this.n - 2);
-    this.solveLinear(b, x, x0, a, 1 + 6 * a, this.iter);
+    this.solveLinear(b, x, x0, a, 1 + 6 * a);
   }
   
   project(Vx, Vy, p, div) {
@@ -103,7 +121,7 @@ class Fluid {
     
     this.setBound(0, div); 
     this.setBound(0, p);
-    this.solveLinear(0, p, div, 1, 6, this.iter);
+    this.solveLinear(0, p, div, 1, 6);
     
     for (let j = 1; j < this.n - 1; j++) {
       for (let i = 1; i < this.n - 1; i++) {
@@ -134,12 +152,12 @@ class Fluid {
              
         
         x = max(x, 0.5);
-        x = min(x, this.n + 0.5);
+        x = min(x, (this.n - 2) + 0.5);
         i0 = floor(x); 
         i1 = i0 + 1;
                 
         y = max(y, 0.5);
-        y = min(y, this.n + 0.5);
+        y = min(y, (this.n - 2) + 0.5);
         j0 = floor(y);
         j1 = j0 + 1; 
                 
@@ -148,39 +166,77 @@ class Fluid {
         t1 = y - j0; 
         t0 = 1 - t1;
                 
-        let i0i = int(i0);
-        let i1i = int(i1);
-        let j0i = int(j0);
-        let j1i = int(j1);
+        let i0i = parseInt(i0);
+        let i1i = parseInt(i1);
+        let j0i = parseInt(j0);
+        let j1i = parseInt(j1);
                 
         d[this.getIndex(i, j)] = s0 * (t0 * d0[this.getIndex(i0i, j0i)] + t1 * d0[this.getIndex(i0i, j1i)]) +
                                  s1 * (t0 * d0[this.getIndex(i1i, j0i)] + t1 * d0[this.getIndex(i1i, j1i)]);
       }
     }
     
-    setBound(b, d);
+    this.setBound(b, d);
   }
 }
 
 
-let fluid, dt = 1, diff = 0, visc = 0;
+let fluid;
+let dt = 0.01;
+let diff = 0;
+let visc = 0.0000001;
 
+let dimension = 128;
+let scaled = 4;
+
+let source = 4;
+let angle, timeScale = 0.0005;
+let velocity = 10;
 
 function setup() {
   //createCanvas(min(windowWidth, windowHeight), min(windowWidth, windowHeight));
-  createCanvas(200, 200);
+  createCanvas(dimension * scaled * 2, dimension * scaled);
   
-  fluid = new Fluid(width, dt, diff, visc);
-}
-
-
-function mouseDragged() {
-  fluid.addDensity(mouseX, mouseY, 100);
+  fluid = new Fluid(dimension, scaled, dt, diff, visc, 4);
 }
 
 function draw() {
   background(0);
   
+  angle = 4 * PI * noise(millis() * timeScale);
+  
+  for (let i = -floor(source/2); i < floor(source/2); i++) {
+    for (let j = -floor(source/2); j < floor(source/2); j++) {
+      fluid.addDensity(parseInt(dimension / 2) + i, parseInt(dimension / 2) + j, 100);
+      fluid.addVelocity(parseInt(dimension / 2) + i, parseInt(dimension / 2) + j, velocity * sin(angle), velocity * cos(angle));
+    }
+  }
+  
+  push();
   fluid.step();
   fluid.renderD();
+  pop();
+  
+  push();
+  fill(0);
+  textSize(30);
+  textAlign(CENTER);
+  text("Density", dimension * scaled / 2, 50);
+  pop();
+  
+  push();
+  translate(width / 2, 0);
+  fluid.renderV();
+  fill(0);
+  noStroke();
+  rect(0, 0, 1, height);
+  pop();
+  
+  push();
+  translate(width / 2, 0);
+  fill(0);
+  textSize(30);
+  textAlign(CENTER);
+  text("Velocity", dimension * scaled / 2, 50);
+  pop();
 }
