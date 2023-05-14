@@ -29,6 +29,16 @@ class Fluid {
     this.advect(0, this.density, this.s, this.Vx, this.Vy);
   }
   
+  render() {
+    for (let j = 0; j < this.n; j++) {
+      for (let i = 0; i < this.n; i++) {
+        fill(255, this.density[this.getIndex(i, j)]);
+        noStroke();
+        square(i, j, 1);
+      }
+    }
+  }
+  
   getIndex(x, y) {
     return x + y * this.n;
   }
@@ -163,8 +173,14 @@ function setup() {
   fluid = new Fluid(width, dt, diff, visc);
 }
 
+
+function mouseDragged() {
+  fluid.addDensity(mouseX, mouseY, 100);
+}
+
 function draw() {
   background(0);
   
   fluid.step();
+  fluid.renderD();
 }
