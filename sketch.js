@@ -209,3 +209,71 @@ class Fluid {
     this.setBound(b, d);
   }
 }
+
+//Fluid Parameters
+let fluid;
+let dt = 0.01;
+let diff = 0;
+let visc = 0.0000001;
+
+//Canvas Parameters
+let dimension = 64;
+let scaled = 5;
+
+//Fluid Parameters
+let source = 3;
+let angle, timeScale = 0.0005;
+let velocity = 10;
+
+function setup() {
+  //createCanvas(min(windowWidth, windowHeight), min(windowWidth, windowHeight));
+  createCanvas(dimension * scaled * 2, dimension * scaled);
+  
+  fluid = new Fluid(dimension, scaled, dt, diff, visc, 4);
+}
+
+function draw() {
+  background(0);
+
+  //Generate random angle
+  angle = 4 * PI * noise(millis() * timeScale);
+  
+  //Add density and velocity of fluid to simulation
+  for (let i = -floor(source/2); i < floor(source/2); i++) {
+    for (let j = -floor(source/2); j < floor(source/2); j++) {
+      fluid.addDensity(parseInt(dimension / 2) + i, parseInt(dimension / 2) + j, 100);
+      fluid.addVelocity(parseInt(dimension / 2) + i, parseInt(dimension / 2) + j, velocity * sin(angle), velocity * cos(angle));
+    }
+  }
+  
+  //Draw density map
+  push();
+  fluid.step();
+  fluid.renderD();
+  pop();
+  
+  //Draw density text
+  push();
+  fill(0);
+  textSize(30);
+  textAlign(CENTER);
+  text("Density", dimension * scaled / 2, 50);
+  pop();
+  
+  //Draw velocity map
+  push();
+  translate(width / 2, 0);
+  fluid.renderV();
+  pop();
+  
+  //Draw velocity text
+  push();
+  translate(width / 2, 0);
+  fill(0);
+  textSize(30);
+  textAlign(CENTER);
+  text("Velocity", dimension * scaled / 2, 50);
+  noStroke();
+  rect(0, 0, 1, height);
+  pop();
+}
