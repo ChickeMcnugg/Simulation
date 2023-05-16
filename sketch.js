@@ -35,7 +35,7 @@ class Fluid {
     for (let i = 0; i < this.n; i++) {
       for (let j = 0; j < this.n; j++) {
         let d = this.density[this.getIndex(i, j)];
-        d = constrain(d - 0.1, 0, 255);
+        d = constrain(d - 2, 0, 255);
         this.density[this.getIndex(i, j)] = d;
         fill(255 - d, 255, 255);
         noStroke();
@@ -48,7 +48,7 @@ class Fluid {
     colorMode(HSB);
     for (let i = 0; i < this.n; i++) {
       for (let j = 0; j < this.n; j++) {
-        fill(255 - (60 * pow(pow(this.Vx[this.getIndex(i, j)], 2) + pow(this.Vy[this.getIndex(i, j)], 2), 0.5)), 255, 255);
+        fill(255 - (150 * pow(pow(this.Vx[this.getIndex(i, j)], 2) + pow(this.Vy[this.getIndex(i, j)], 2), 0.5)), 255, 255);
         noStroke();
         square(i * scaled, j * scaled, scaled);
       }
